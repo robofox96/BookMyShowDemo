@@ -20,8 +20,8 @@ public class BookingController {
     BookingService bookingService;
 
     @RequestMapping(value = "/lockSeats",produces = "application/json", method = RequestMethod.PUT)
-    public ResponseEntity lockSeats(@RequestParam(value = "seat_id_list") List<Integer> seatIdList) throws InterruptedException {
-        return new ResponseEntity("Status : " + bookingService.lockSeats(seatIdList), HttpStatus.OK);
+    public ResponseEntity lockSeats(@RequestBody BookingRequestModel bookingRequestModel) throws InterruptedException {
+        return new ResponseEntity("Status : " + bookingService.lockSeats(bookingRequestModel), HttpStatus.OK);
     }
 
     @RequestMapping(value = "/bookSeats",produces = "application/json", method = RequestMethod.POST)

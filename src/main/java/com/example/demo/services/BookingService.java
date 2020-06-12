@@ -1,14 +1,8 @@
 package com.example.demo.services;
 
 import com.example.demo.apimodels.BookingRequestModel;
-import com.example.demo.entities.BookingRequest;
-import com.example.demo.entities.MovieSchedule;
-import com.example.demo.entities.Seat;
-import com.example.demo.entities.User;
-import com.example.demo.repositories.BookingRequestRepo;
-import com.example.demo.repositories.MovieScheduleRepo;
-import com.example.demo.repositories.SeatRepo;
-import com.example.demo.repositories.UserRepo;
+import com.example.demo.entities.*;
+import com.example.demo.repositories.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.AsyncTaskExecutor;
@@ -33,38 +27,51 @@ public class BookingService {
     MovieScheduleRepo movieScheduleRepo;
 
     @Autowired
+    PreBookingRepo preBookingRepo;
+
+    @Autowired
     BookingRequestRepo bookingRequestRepo;
 
-    public Boolean lockSeats(List<Integer> seatIdList) throws InterruptedException {
-        List<Seat> updatedSeatList = new ArrayList<>();
-        for(Integer seatId : seatIdList){
+    private static final Integer WAIT_TIME_FOR_UNLOCKING = 600000;
+
+    public Boolean lockSeats(BookingRequestModel bookingRequestModel) throws InterruptedException {
+        List<Integer> preBookingIds = new ArrayList<>();
+        User user = userRepo.findById(bookingRequestModel.getUserId()).orElse(null);
+        MovieSchedule movieSchedule = movieScheduleRepo.findById(bookingRequestModel.getMovieScheduleId()).orElse(null);
+        if(Objects.isNull(movieSchedule) || Objects.isNull(user)){
+            throw new RuntimeException("Invalid Request Parameters" + bookingRequestModel.getMovieScheduleId());
+        }
+        for(Integer seatId : bookingRequestModel.getSeatIdList()){
             Seat seat = seatRepo.findById(seatId).orElse(null);
             if(Objects.nonNull(seat)){
-                if(!seat.getStatus().equals(Seat.Status.EMPTY)){
-                    throw new RuntimeException("Seat is not available. SeatId : " + seatId);
-                }else{
-                    seat.setStatus(Seat.Status.LOCKED);
-                    updatedSeatList.add(seat);
+                PreBooking preBookingLock = new PreBooking();
+                preBookingLock.setMovieSchedule(movieSchedule);
+                preBookingLock.setSeat(seat);
+                preBookingLock.setUser(user);
+                try{
+                    preBookingLock = preBookingRepo.save(preBookingLock);
+                    preBookingIds.add(preBookingLock.getId());
+                }catch(Exception e){
+                    log.info("Error while locking seat with info : " + preBookingLock);
+                    log.error("Error Message :- ", e);
+                    unlockSeats(preBookingIds,0);   //Immediately unlock seats that were locked in current transaction.
+                    return false;
                 }
             }else{
                 throw new RuntimeException("Invalid Seat Id --> "+seatId);
             }
         }
-        seatRepo.saveAll(updatedSeatList);
-        unlockSeats(updatedSeatList);
+        unlockSeats(preBookingIds,WAIT_TIME_FOR_UNLOCKING);
         return true;
     }
 
     @Async
-    public void unlockSeats(List<Seat> seatList) throws InterruptedException {
+    public void unlockSeats(List<Integer> preBookIds, Integer waitTime) throws InterruptedException {
         log.info("Starting Timer for locked seats");
-        Thread.sleep(600000);
+        Thread.sleep(waitTime);
         try{
-            for(Seat seat : seatList){
-                if(!seat.getStatus().equals(Seat.Status.BOOKED)){
-                    seat.setStatus(Seat.Status.EMPTY);
-                    seatRepo.save(seat);
-                }
+            for(Integer lockId : preBookIds){
+                preBookingRepo.deleteById(lockId);
             }
         }catch (Exception e){
             log.error("Error while unlocking seats", e);
@@ -82,10 +89,10 @@ public class BookingService {
             if(Objects.isNull(seat)){
                 throw new RuntimeException("Invalid seat id : " + seatId);
             }
-            if(!seat.getStatus().equals(Seat.Status.LOCKED)){
+            PreBooking preBooking = preBookingRepo.findBySeatIdAndMovieScheduleIdAndUserId(seat.getId(),movieSchedule.getId(),user.getId()).orElse(null);
+            if(Objects.isNull(preBooking)){
                 throw new RuntimeException("Error while booking seat ID : " + seatId);
             }
-            seat.setStatus(Seat.Status.BOOKED);
             updatedSeatList.add(seat);
         }
         //All seats are available
