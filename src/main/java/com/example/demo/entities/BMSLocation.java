@@ -14,6 +14,9 @@ public class BMSLocation implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @Column(name = "name")
+    private String name;
+
     @SerializedName("address")
     @ManyToOne
     @JoinColumn(name = "address_id")

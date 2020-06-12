@@ -3,11 +3,12 @@ package com.example.demo.entities;
 import lombok.Data;
 
 import javax.persistence.*;
+import java.io.Serializable;
 
 @Entity
 @Data
 @Table(name = "booking_requests")
-public class BookingRequest {
+public class BookingRequest implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -1,9 +1,6 @@
 package com.example.demo.services;
 
-import com.example.demo.apimodels.NewMovieRequestModel;
-import com.example.demo.apimodels.NewMovieSceduleRequestModel;
-import com.example.demo.apimodels.NewScreenLayoutRequest;
-import com.example.demo.apimodels.ScreenLayoutModel;
+import com.example.demo.apimodels.*;
 import com.example.demo.entities.*;
 import com.example.demo.repositories.*;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +29,13 @@ public class AdminService {
     SeatRepo seatRepo;
 
     @Autowired
+    AddressRepo addressRepo;
+
+    @Autowired
     MovieScheduleRepo movieScheduleRepo;
+
+    @Autowired
+    UserRepo userRepo;
 
     public Boolean addNewMovie(NewMovieRequestModel newMovieRequestModel){
         try{
@@ -41,8 +44,59 @@ public class AdminService {
             newMovie.setDuration(newMovieRequestModel.getDuration());
             newMovie.setGenre(newMovieRequestModel.getGenre());
             newMovie.setLanguage(newMovieRequestModel.getLanguage());
-            movieRepo.save(newMovie);
+            newMovie = movieRepo.save(newMovie);
+            log.info("New Movie Added : {}", newMovie);
         }catch (Exception e){
+            log.error("Error while adding new Movie --> {}", newMovieRequestModel);
+            return false;
+        }
+        return true;
+    }
+
+    public Boolean addNewUser(NewUserRequest newUserRequest){
+        try{
+            User user = new User();
+            user.setName(newUserRequest.getName());
+            user.setEmail(newUserRequest.getEmail());
+            user = userRepo.save(user);
+            log.info("New User Added : {}", user);
+        }catch (Exception e){
+            log.error("Error while adding user : {}", newUserRequest);
+            log.error("Error --> ", e);
+            return false;
+        }
+        return true;
+    }
+
+    public Boolean addNewTheater(NewTheaterRequest newTheaterRequest){
+        try{
+            Theater theater = new Theater();
+            theater.setName(newTheaterRequest.getName());
+            Address address = newTheaterRequest.getAddress();
+            address = addressRepo.save(address);
+            theater.setAddress(address);
+            theater.setNoOfScreens(newTheaterRequest.getNoOfScreens());
+            theater = theaterRepo.save(theater);
+            log.info("New Theater Added : {}", theater);
+        }catch (Exception e){
+            log.error("Error while adding theater : {}", newTheaterRequest);
+            return false;
+        }
+        return true;
+    }
+
+    public Boolean addNewScreen(NewScreenRequest newScreenRequest){
+        Theater theater = theaterRepo.findById(newScreenRequest.getTheaterId()).orElse(null);
+        try{
+            if(Objects.isNull(theater))
+                throw new RuntimeException("Invalid theater id : " + newScreenRequest.getTheaterId());
+            Screen screen = new Screen();
+            screen.setTheater(theater);
+            screen.setType(newScreenRequest.getScreenType());
+            screen = screenRepo.save(screen);
+            log.info("New Screen Added : {}", screen);
+        }catch (Exception e){
+            log.error("Error while adding screen : {}", newScreenRequest);
             return false;
         }
         return true;
@@ -61,7 +115,8 @@ public class AdminService {
             movieSchedule.setScreen(screen);
             movieSchedule.setStartTime(newMovieSceduleRequestModel.getStartTime());
             movieSchedule.setEndTime(newMovieSceduleRequestModel.getEndTime());
-            movieScheduleRepo.save(movieSchedule);
+            movieSchedule = movieScheduleRepo.save(movieSchedule);
+            log.info("New Movie Schedule Added : {}", movieSchedule);
         }catch (Exception e){
             log.error(e.getMessage());
             return false;
@@ -120,6 +175,7 @@ public class AdminService {
                         seatRepo.save(newSeat);
                     }
                 }
+                log.info("New Screen Layout Added : {}", newScreenLayoutRequest);
             }
         }catch (Exception e){
             log.error(e.getMessage());

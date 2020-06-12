@@ -3,12 +3,13 @@ package com.example.demo.entities;
 import lombok.Data;
 
 import javax.persistence.*;
+import java.io.Serializable;
 import java.util.Date;
 
 @Entity
 @Data
-@Table(name = "movie_schedule")
-public class MovieSchedule {
+@Table(name = "movie_schedule", uniqueConstraints = @UniqueConstraint(columnNames = {"movie_id","screen_id"}))
+public class MovieSchedule implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

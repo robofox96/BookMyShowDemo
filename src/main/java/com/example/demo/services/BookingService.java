@@ -45,10 +45,14 @@ public class BookingService {
             Seat seat = seatRepo.findById(seatId).orElse(null);
             if(Objects.nonNull(seat)){
                 PreBooking preBookingLock = new PreBooking();
-                preBookingLock.setMovieSchedule(movieSchedule);
-                preBookingLock.setSeat(seat);
-                preBookingLock.setUser(user);
+                BookingRequest bookingRequest = bookingRequestRepo.findByMovieScheduleIdAndSeatId(movieSchedule.getId(),seat.getId()).orElse(null);
                 try{
+                    preBookingLock.setMovieSchedule(movieSchedule);
+                    preBookingLock.setSeat(seat);
+                    preBookingLock.setUser(user);
+                    if(Objects.nonNull(bookingRequest)){
+                        throw new Exception("Seat already Booked");
+                    }
                     preBookingLock = preBookingRepo.save(preBookingLock);
                     preBookingIds.add(preBookingLock.getId());
                 }catch(Exception e){
@@ -66,7 +70,7 @@ public class BookingService {
     }
 
     @Async
-    public void unlockSeats(List<Integer> preBookIds, Integer waitTime) throws InterruptedException {
+    private void unlockSeats(List<Integer> preBookIds, Integer waitTime) throws InterruptedException {
         log.info("Starting Timer for locked seats");
         Thread.sleep(waitTime);
         try{
@@ -81,6 +85,7 @@ public class BookingService {
     public Boolean bookSeats(BookingRequestModel bookingRequestModel){
         User user = userRepo.findById(bookingRequestModel.getUserId()).orElse(null);
         MovieSchedule movieSchedule = movieScheduleRepo.findById(bookingRequestModel.getMovieScheduleId()).orElse(null);
+        List<Integer> seatsToUnlock = new ArrayList<>();
         if(Objects.isNull(user) || Objects.isNull(movieSchedule))
             throw new RuntimeException("Invalid user/moviechedule id");
         List<Seat> updatedSeatList = new ArrayList<>();
@@ -93,9 +98,19 @@ public class BookingService {
             if(Objects.isNull(preBooking)){
                 throw new RuntimeException("Error while booking seat ID : " + seatId);
             }
+            seatsToUnlock.add(preBooking.getId());
             updatedSeatList.add(seat);
         }
-        //All seats are available
+        //Unlock Seats and move for final booking
+        try {
+            unlockSeats(seatsToUnlock,0);
+        } catch (InterruptedException e) {
+            log.error("Error while unlocking seats for final booking");
+            log.error(e.getMessage());
+            return false;
+        }
+
+        //All seats are available and locks are removed to move to final booking.
         for(Seat seat : updatedSeatList){
             BookingRequest bookingRequest = new BookingRequest();
             bookingRequest.setUser(user);

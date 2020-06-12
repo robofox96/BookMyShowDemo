@@ -1,13 +1,15 @@
 package com.example.demo.entities;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
+import java.io.Serializable;
 
 @Entity
 @Table(name = "addresses")
 @Data
-public class Address {
+public class Address implements Serializable {
 
     @Id
     @GeneratedValue(

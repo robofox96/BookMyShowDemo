@@ -21,7 +21,6 @@ public class NewScreenLayoutRequest {
 
     @Data
     @ToString
-    @NoArgsConstructor
     @AllArgsConstructor
     public static class TierDetails{
         @SerializedName("tier_name")

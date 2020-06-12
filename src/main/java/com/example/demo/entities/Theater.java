@@ -16,7 +16,7 @@ public class Theater extends BMSLocation {
     @Column(name = "no_of_screens")
     private Integer noOfScreens;
 
-    @OneToMany(mappedBy = "theater")
-    private List<Screen> screenList;
+    /*@OneToMany(mappedBy = "theater")
+    private List<Screen> screenList;*/
 
 }

@@ -4,12 +4,13 @@ import com.google.gson.annotations.SerializedName;
 import lombok.Data;
 
 import javax.persistence.*;
+import java.io.Serializable;
 import java.util.List;
 
 @Entity
 @Data
 @Table(name = "screens")
-public class Screen {
+public class Screen implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,6 +23,6 @@ public class Screen {
     @JoinColumn(name = "theater_id")
     private Theater theater;
 
-    @OneToMany(mappedBy = "screen")
-    private List<Seat> seatList;
+    /*@OneToMany(mappedBy = "screen")
+    private List<Seat> seatList;*/
 }
